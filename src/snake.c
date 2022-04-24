@@ -15,13 +15,14 @@
 
 typedef struct snake_t {
     unsigned int pos_x, pos_y;
-    struct snake_t *next_body_cell;
+    struct snake_t *next_body_cell, *prev_body_cell;
 } snake_t; 
 
 snake_t *snake_head = NULL;
+snake_t *snake_tail = NULL;
 
 void new_cell ();
-void update_snake(bool, char );
+void update_snake(char );
 void updateBoard(char (*)[]);
 void keyboardListener(char *);
 void printBoardOnScreen(char (*)[]);
@@ -43,12 +44,18 @@ int main (void) {
     new_cell();
     new_cell();
     new_cell();
+    new_cell();
+    new_cell();
+    new_cell();
+    new_cell();
+    new_cell();
+    new_cell();
     updateBoard(gameBoard);     // PUT THE CORNER CHARACTERS IN THE BOARD     
 
     while(true) {
         system("clear");
         printf("\t\t\t\t WHATEVER GAME\n\t\t\t\t FRUITS EATEN: \n");
-        update_snake(true ,snakeMoveDirection);
+        update_snake(snakeMoveDirection);
         updateBoard(gameBoard);
         printBoardOnScreen(gameBoard);
         keyboardListener(&snakeMoveDirection); 
@@ -64,62 +71,48 @@ void new_cell () {
         snake_head = (snake_t*) malloc(sizeof(snake_t));
         snake_head->pos_y = 10;
         snake_head->pos_x = 10; 
+        snake_tail = snake_head;
     } else { 
-        snake_t *first_cell = snake_head;
-        snake_t *last_cell = NULL;
         
-        while (snake_head->next_body_cell != NULL) {
-            snake_head = snake_head->next_body_cell;
-        }
-
-
-        last_cell = snake_head;
         snake_t *new_cell = (snake_t*) malloc(sizeof(snake_t));
-        new_cell->pos_x = last_cell->pos_x;
-        new_cell->pos_y = last_cell->pos_y + 1;
-        last_cell->next_body_cell = new_cell;
-        snake_head = first_cell;
+        new_cell->pos_x = snake_tail->pos_x;
+        new_cell->pos_y = snake_tail->pos_y + 1;
+        snake_tail->next_body_cell = new_cell;
+        new_cell->prev_body_cell = snake_tail;
+
+        snake_tail = new_cell;
    }
 }
-void update_snake (bool head_is_first_cell , char moveDirection) {
-    static snake_t *snake_first_cell = NULL;
-    if (snake_head->next_body_cell != NULL) {
-        snake_t *next_cell = snake_head->next_body_cell;
-        next_cell->pos_x = snake_head->pos_x;
-        next_cell->pos_y = snake_head->pos_y;
-        
-       
-    }
+void update_snake (char moveDirection) {
+    snake_t *head_buff = snake_head;
+    snake_t *tail_buff = snake_tail;
     
-    if (head_is_first_cell == true) {
-          switch(moveDirection) {
-                case 'w':
-                    snake_head->pos_y = (snake_head->pos_y-- > 1)
-                    ? snake_head->pos_y-- : SIDE_SIZE - 2;
-                    break;
-                case 'd':
-                    snake_head->pos_x = (snake_head->pos_x++ < SIDE_SIZE - 2)
-                    ? snake_head->pos_x++ : 1;
-                    break;
-                case 'a':
-                  snake_head->pos_x = (snake_head->pos_x-- > 1) 
-                  ? snake_head->pos_x-- : SIDE_SIZE - 2;
-                  break;
-                case 's':
-                  snake_head->pos_y = (snake_head->pos_y++ < SIDE_SIZE - 2)
-                  ? snake_head->pos_y++ : 1;
-                  break;
-          }   
-          snake_first_cell = snake_head;
-          
-    }
-
+    while(snake_tail->prev_body_cell != NULL) {
+        snake_tail->pos_x = snake_tail->prev_body_cell->pos_x;
+        snake_tail->pos_y = snake_tail->prev_body_cell->pos_y;
+        snake_tail = snake_tail->prev_body_cell;
     
-    if (snake_head->next_body_cell != NULL) {
-        snake_head = snake_head->next_body_cell;
-        update_snake(false ,moveDirection);
     }
-    snake_head = snake_first_cell;
+    switch(moveDirection) {
+        case 'w':
+            snake_head->pos_y = (snake_head->pos_y-- > 1)
+            ? snake_head->pos_y-- : SIDE_SIZE - 2;
+            break;
+        case 'd':
+            snake_head->pos_x = (snake_head->pos_x++ < SIDE_SIZE - 2)
+            ? snake_head->pos_x++ : 1;
+            break;
+        case 'a':
+          snake_head->pos_x = (snake_head->pos_x-- > 1) 
+          ? snake_head->pos_x-- : SIDE_SIZE - 2;
+          break;
+        case 's':
+          snake_head->pos_y = (snake_head->pos_y++ < SIDE_SIZE - 2)
+          ? snake_head->pos_y++ : 1;
+          break;
+      }   
+    snake_head = head_buff;
+    snake_tail = tail_buff;
 }
 
 void updateBoard(char (*board)[SIDE_SIZE]) {
@@ -134,16 +127,18 @@ void updateBoard(char (*board)[SIDE_SIZE]) {
 		}
 	}
 
-    snake_t *first_cell = snake_head;
+    snake_t *head_buff = snake_head;
     
     while (snake_head != NULL) {
         board[snake_head->pos_y][snake_head->pos_x] = SNAKE_CHAR;
         snake_head = snake_head->next_body_cell;   
     }
 
-    snake_head = first_cell;
+    snake_head = head_buff;
 
-} void keyboardListener (char *currentDirection) {
+} 
+
+void keyboardListener (char *currentDirection) {
     fd_set input;
     int fds, ret_val, num;
     struct timeval tv;
