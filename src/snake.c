@@ -8,6 +8,7 @@
 #include <stdbool.h>
 
 #define SNAKE_CHAR '#'
+#define INITIAL_SNAKE_LENGTH 5
 #define SIDE_SIZE 40
 #define STDIN 0     // INPUT FILE DESCRIPTOR
 #define TIME_SEC 0
@@ -21,8 +22,16 @@ typedef struct snake_t {
 snake_t *snake_head = NULL;
 snake_t *snake_tail = NULL;
 
-void new_cell ();
-void update_snake(char );
+typedef struct fruit_t {
+    bool is_on_board;
+    unsigned int pos_x, pos_y;
+} fruit_t;
+
+fruit_t *fruit = NULL;
+
+void new_cell (char);
+void new_fruit ();
+void update_snake(char);
 void updateBoard(char (*)[]);
 void keyboardListener(char *);
 void printBoardOnScreen(char (*)[]);
@@ -30,7 +39,7 @@ unsigned int genNumInBoard();
 
 int main (void) {
 	char gameBoard[SIDE_SIZE][SIDE_SIZE];
-    char snakeMoveDirection = 'w';
+    char snakeMoveDirection = 's';
     
     // ENABLE NON BLOCKING INPUT BY TURNING OFF ECHO AND ICANON 
     static struct termios oldt, newt;
@@ -40,18 +49,13 @@ int main (void) {
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
     
-
-    new_cell();
-    new_cell();
-    new_cell();
-    new_cell();
-    new_cell();
-    new_cell();
-    new_cell();
-    new_cell();
-    new_cell();
-    updateBoard(gameBoard);     // PUT THE CORNER CHARACTERS IN THE BOARD     
-
+    
+    for (int i = 0; i < INITIAL_SNAKE_LENGTH; i++) {
+        new_cell(snakeMoveDirection);
+    }
+    fruit = (fruit_t*) malloc(sizeof(fruit_t));
+    //new_fruit();
+    //updateBoard(gameBoard); 
     while(true) {
         system("clear");
         printf("\t\t\t\t WHATEVER GAME\n\t\t\t\t FRUITS EATEN: \n");
@@ -65,7 +69,7 @@ int main (void) {
     return 0;
 }
 
-void new_cell () {
+void new_cell (char snakeMoveDirection) {
     
     if (snake_head == NULL) {
         snake_head = (snake_t*) malloc(sizeof(snake_t));
@@ -75,15 +79,40 @@ void new_cell () {
     } else { 
         
         snake_t *new_cell = (snake_t*) malloc(sizeof(snake_t));
-        new_cell->pos_x = snake_tail->pos_x;
-        new_cell->pos_y = snake_tail->pos_y + 1;
+        switch (snakeMoveDirection) {
+            case 'w':
+                new_cell->pos_x = snake_tail->pos_x;
+                new_cell->pos_y = snake_tail->pos_y + 1;
+                break;
+            case 'd':
+                new_cell->pos_x = snake_tail->pos_x - 1;
+                new_cell->pos_y = snake_tail->pos_y;
+                break;
+            case 'a':
+                new_cell->pos_x = snake_tail->pos_x + 1;
+                new_cell->pos_y = snake_tail->pos_y;
+                break;
+            case 's':  
+                new_cell->pos_x = snake_tail->pos_x;
+                new_cell->pos_y = snake_tail->pos_y - 1;
+                break;
+
+        }
         snake_tail->next_body_cell = new_cell;
         new_cell->prev_body_cell = snake_tail;
 
         snake_tail = new_cell;
    }
 }
-void update_snake (char moveDirection) {
+
+void new_fruit () {
+    fruit->pos_x = genNumInBoard();
+    fruit->pos_y = genNumInBoard();
+    fruit->is_on_board = false;
+
+}
+
+void update_snake (char snakeMoveDirection) {
     snake_t *head_buff = snake_head;
     snake_t *tail_buff = snake_tail;
     
@@ -93,7 +122,7 @@ void update_snake (char moveDirection) {
         snake_tail = snake_tail->prev_body_cell;
     
     }
-    switch(moveDirection) {
+    switch(snakeMoveDirection) {
         case 'w':
             snake_head->pos_y = (snake_head->pos_y-- > 1)
             ? snake_head->pos_y-- : SIDE_SIZE - 2;
@@ -113,6 +142,11 @@ void update_snake (char moveDirection) {
       }   
     snake_head = head_buff;
     snake_tail = tail_buff;
+
+    if (snake_head->pos_x == fruit->pos_x && snake_head->pos_y == fruit->pos_y) {
+        new_fruit();
+        new_cell(snakeMoveDirection);
+    }
 }
 
 void updateBoard(char (*board)[SIDE_SIZE]) {
@@ -120,11 +154,10 @@ void updateBoard(char (*board)[SIDE_SIZE]) {
 		for (unsigned int x = 0; x < SIDE_SIZE; x++) {
 			if (y == 0 || y == SIDE_SIZE - 1 || x == 0 || x == SIDE_SIZE - 1) {
 				board[y][x] = '.';
-			}
-			else {
-				board[y][x] = ' ';
-			}
-		}
+		    }   else if (x != fruit->pos_x && y != fruit->pos_y) {
+                    board[y][x] = ' ';
+            }   
+	    }
 	}
 
     snake_t *head_buff = snake_head;
@@ -136,6 +169,10 @@ void updateBoard(char (*board)[SIDE_SIZE]) {
 
     snake_head = head_buff;
 
+    /*if (fruit->is_on_board == false) {
+        board[fruit->pos_y][fruit->pos_x] = '*';
+        fruit->is_on_board = true;  
+    }*/
 } 
 
 void keyboardListener (char *currentDirection) {
@@ -187,4 +224,5 @@ void printBoardOnScreen(char (*board)[SIDE_SIZE]) {
 		printf("\n");
 	}	
 
+    
 }
