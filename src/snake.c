@@ -11,25 +11,25 @@
 #define SIDE_SIZE 40
 #define STDIN 0     // INPUT FILE DESCRIPTOR
 #define TIME_SEC 0
-#define TIME_USEC 250 * 1000
+#define TIME_USEC 250 * 1000    //250
 
-typedef struct Snake_s {
-    size_t pos_x, pos_y;
-} Snake; 
+typedef struct snake_t {
+    unsigned int pos_x, pos_y;
+    struct snake_t *next_body_cell;
+} snake_t; 
 
+snake_t *snake_head = NULL;
 
-void initializeBoard(char (*)[]);
-void snakeFirstConditions(Snake *, char (*)[], size_t *, char *);
-void moveSnake(Snake (*) [], char (*)[], size_t *, char *, bool *);
+void new_cell ();
+void update_snake(bool, char );
+void updateBoard(char (*)[]);
 void keyboardListener(char *);
 void printBoardOnScreen(char (*)[]);
-size_t genNumInBoard();
+unsigned int genNumInBoard();
 
 int main (void) {
 	char gameBoard[SIDE_SIZE][SIDE_SIZE];
-    Snake snakeBody[SIDE_SIZE * SIDE_SIZE - SIDE_SIZE * 4];
-    size_t snakeBodySize;
-    char snakeMoveDirection;
+    char snakeMoveDirection = 'w';
     
     // ENABLE NON BLOCKING INPUT BY TURNING OFF ECHO AND ICANON 
     static struct termios oldt, newt;
@@ -40,37 +40,91 @@ int main (void) {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
     
 
+    new_cell();
+    new_cell();
+    new_cell();
+    updateBoard(gameBoard);     // PUT THE CORNER CHARACTERS IN THE BOARD     
 
-    initializeBoard(gameBoard);     // PUT THE CORNER CHARACTERS IN THE BOARD 
-    snakeFirstConditions(&snakeBody[0], gameBoard, &snakeBodySize, &snakeMoveDirection);
-    
-    gameBoard[genNumInBoard()][genNumInBoard()] = '*'; // PUT A FRUIT IN THE BOARD
-    bool isFruitOnBoard = true;     //  SET THAT IS AN FRUIT IN THE BOARD
-	size_t fruitsEaten = 0;     //  COUNT THE TOTAL OF FRUITS EATEN 
-    
     while(true) {
         system("clear");
-        printf("\t\t\t\t WHATEVER GAME\n\t\t\t\t FRUITS EATEN: %lu\n", fruitsEaten);
-
-        if (!isFruitOnBoard) {
-            gameBoard[genNumInBoard()][genNumInBoard()] = '*';
-            fruitsEaten++;
-            isFruitOnBoard = true; 
-        }
-        
-        moveSnake(&snakeBody, gameBoard, &snakeBodySize, &snakeMoveDirection, &isFruitOnBoard);
+        printf("\t\t\t\t WHATEVER GAME\n\t\t\t\t FRUITS EATEN: \n");
+        update_snake(true ,snakeMoveDirection);
+        updateBoard(gameBoard);
         printBoardOnScreen(gameBoard);
         keyboardListener(&snakeMoveDirection); 
-        
     }    
 
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // RETURN TO THE DEFAULT OPTIONS AFTER EXECUTION
     return 0;
 }
 
-void initializeBoard(char (*board)[SIDE_SIZE]) {
-	for (size_t y = 0; y < SIDE_SIZE; y++){
-		for (size_t x = 0; x < SIDE_SIZE; x++) {
+void new_cell () {
+    
+    if (snake_head == NULL) {
+        snake_head = (snake_t*) malloc(sizeof(snake_t));
+        snake_head->pos_y = 10;
+        snake_head->pos_x = 10; 
+    } else { 
+        snake_t *first_cell = snake_head;
+        snake_t *last_cell = NULL;
+        
+        while (snake_head->next_body_cell != NULL) {
+            snake_head = snake_head->next_body_cell;
+        }
+
+
+        last_cell = snake_head;
+        snake_t *new_cell = (snake_t*) malloc(sizeof(snake_t));
+        new_cell->pos_x = last_cell->pos_x;
+        new_cell->pos_y = last_cell->pos_y + 1;
+        last_cell->next_body_cell = new_cell;
+        snake_head = first_cell;
+   }
+}
+void update_snake (bool head_is_first_cell , char moveDirection) {
+    static snake_t *snake_first_cell = NULL;
+    if (snake_head->next_body_cell != NULL) {
+        snake_t *next_cell = snake_head->next_body_cell;
+        next_cell->pos_x = snake_head->pos_x;
+        next_cell->pos_y = snake_head->pos_y;
+        
+       
+    }
+    
+    if (head_is_first_cell == true) {
+          switch(moveDirection) {
+                case 'w':
+                    snake_head->pos_y = (snake_head->pos_y-- > 1)
+                    ? snake_head->pos_y-- : SIDE_SIZE - 2;
+                    break;
+                case 'd':
+                    snake_head->pos_x = (snake_head->pos_x++ < SIDE_SIZE - 2)
+                    ? snake_head->pos_x++ : 1;
+                    break;
+                case 'a':
+                  snake_head->pos_x = (snake_head->pos_x-- > 1) 
+                  ? snake_head->pos_x-- : SIDE_SIZE - 2;
+                  break;
+                case 's':
+                  snake_head->pos_y = (snake_head->pos_y++ < SIDE_SIZE - 2)
+                  ? snake_head->pos_y++ : 1;
+                  break;
+          }   
+          snake_first_cell = snake_head;
+          
+    }
+
+    
+    if (snake_head->next_body_cell != NULL) {
+        snake_head = snake_head->next_body_cell;
+        update_snake(false ,moveDirection);
+    }
+    snake_head = snake_first_cell;
+}
+
+void updateBoard(char (*board)[SIDE_SIZE]) {
+   	for (unsigned int y = 0; y < SIDE_SIZE; y++){
+		for (unsigned int x = 0; x < SIDE_SIZE; x++) {
 			if (y == 0 || y == SIDE_SIZE - 1 || x == 0 || x == SIDE_SIZE - 1) {
 				board[y][x] = '.';
 			}
@@ -79,18 +133,17 @@ void initializeBoard(char (*board)[SIDE_SIZE]) {
 			}
 		}
 	}
-}
 
-void snakeFirstConditions(Snake *snakeHead, char (*board)[SIDE_SIZE], size_t **snakeSize, char *snakeDirection) {
+    snake_t *first_cell = snake_head;
+    
+    while (snake_head != NULL) {
+        board[snake_head->pos_y][snake_head->pos_x] = SNAKE_CHAR;
+        snake_head = snake_head->next_body_cell;   
+    }
 
-    snakeHead->pos_x = SIDE_SIZE / 2;
-    snakeHead->pos_y = SIDE_SIZE / 2;
-    *snakeDirection = 'w';
-    **snakeSize = 1;
+    snake_head = first_cell;
 
-}
-
-void keyboardListener (char *currentDirection) {
+} void keyboardListener (char *currentDirection) {
     fd_set input;
     int fds, ret_val, num;
     struct timeval tv;
@@ -108,62 +161,22 @@ void keyboardListener (char *currentDirection) {
 
     if (ret_val == -1) {
         perror("select()");
-    }
-    else if (ret_val > 0) {
+    }else if (ret_val > 0) {
         if(FD_ISSET(0, &input))  {
             ch = getchar();
         }   
-    }
-    else {
+    } else {
         return;
     }
-
-    if (ch == 'w' || ch == 's' || ch == 'd' || ch == 'a') {
+    //  Verify inputed key
+    if ((ch == 'w' && *currentDirection != 's') || (ch == 's' && *currentDirection != 'w')
+    || (ch == 'd' && *currentDirection != 'a') || (ch == 'a' && *currentDirection != 'd')) {
         *currentDirection = ch;
     }
-    else {
-        ch = getchar();
-        
-    }
-}
-
-void moveSnake(Snake (*snake) [SIDE_SIZE * SIDE_SIZE - SIDE_SIZE * 4], 
-char (*board)[SIDE_SIZE], size_t **snakeSize, char *direction, bool *isFruitOnBoard) {
     
-        if (*direction == 'w') {
-            board[snake[*snakeSize - 1]->pos_y][snake[snakeSize - 1]->pos_x] = ' ';
-            snake[*snakeSize]->pos_y = (snake[snakeSize - 1]->pos_y-- > 1) ? snake[snakeSize - 1]->pos_y-- : SIDE_SIZE - 2;
-            snake[*snakeSize]->pos_x = snake[snakeSize - 1]->pos_x;
-        }
-        else if (*direction == 's') {
-            board[snake[*snakeSize - 1]->pos_y][snake[snakeSize - 1]->pos_x] = ' ';
-            snake[*snakeSize]->pos_y = (snake[snakeSize - 1]->pos_y++ < SIDE_SIZE - 2) ? snake[snakeSize - 1]->pos_y++ : 1;
-        }
-        else if (*direction == 'd') {
-            board[snake[*snakeSize - 1]->pos_y][snake[snakeSize - 1]->pos_x] = ' ';
-            snake[*snakeSize]->pos_x = (snake[snakeSize - 1]->pos_x++ < SIDE_SIZE - 2) ? snake[snakeSize - 1]->pos_x++ : 1;
-            
-        }
-        else if (*direction == 'a') {
-            board[snake[*snakeSize - 1]->pos_y][snake[snakeSize - 1]->pos_x] = ' ';
-            snake[*snakeSize]->pos_x = (snake[snakeSize - 1]->pos_x-- > 1) ? snake[snakeSize - 1]->pos_x-- : SIDE_SIZE - 2;
-        
-        }else {
-            break;
-        }
-        *isFruitOnBoard = (board[snake[*snakeSize]->pos_y][snake[snakeSize]->pos_x] == '*') ? false : true;
-        
-        for (int i = 0; i < *snakeSize; i++) {
-            snake[i]->pos_y = snake[i + 1]->pos_y;
-            snake[i]->pos_x = snake[i + 1]->pos_x;
-            
-            board[snake[i]->pos_y][snake[i]->pos_x] = SNAKE_CHAR;
-        }
-     
 }
-
-size_t genNumInBoard() {
-    size_t numValue = rand() % SIDE_SIZE;
+unsigned int genNumInBoard() {
+    unsigned int numValue = rand() % SIDE_SIZE;
     while (numValue == 0 || numValue == SIDE_SIZE - 1)
         numValue = rand() % SIDE_SIZE;
     
@@ -171,13 +184,12 @@ size_t genNumInBoard() {
 }
 
 void printBoardOnScreen(char (*board)[SIDE_SIZE]) {
-	for (size_t y = 0; y < SIDE_SIZE; y++) {
-		for (size_t x = 0; x < SIDE_SIZE; x++) {
+	for (unsigned int y = 0; y < SIDE_SIZE; y++) {
+		for (unsigned int x = 0; x < SIDE_SIZE; x++) {
 			printf("%c ", board[y][x]);
 		}
 		
 		printf("\n");
 	}	
-
 
 }
