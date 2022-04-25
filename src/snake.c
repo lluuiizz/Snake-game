@@ -10,6 +10,7 @@
 #define SNAKE_CHAR '#'
 #define INITIAL_SNAKE_LENGTH 5
 #define SIDE_SIZE 30
+#define SNAKE_SIZE_LIMIT (SIDE_SIZE * SIDE_SIZE) - (4 * SIDE_SIZE - 4)
 #define STDIN 0     // INPUT FILE DESCRIPTOR
 #define TIME_SEC 0
 #define TIME_USEC 265 * 1000    //250
@@ -223,7 +224,7 @@ bool check_snake_body_collision() {
 }
 
 bool check_win() {
-    if (snake_size == (SIDE_SIZE * SIDE_SIZE) - (4 * SIDE_SIZE - 4)) {
+    if (snake_size == SNAKE_SIZE_LIMIT) {
         return true;
     }
     return false;
