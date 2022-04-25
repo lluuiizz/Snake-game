@@ -100,6 +100,8 @@ void new_cell (char snake_move_direction) {
         snake_head = (snake_t*) malloc(sizeof(snake_t));
         snake_head->pos_y = SIDE_SIZE / 2 - 1;
         snake_head->pos_x = SIDE_SIZE / 2 - 1; 
+        snake_head->next_body_cell = NULL;
+        snake_head->prev_body_cell = NULL;
         snake_tail = snake_head;
     } else { 
         
