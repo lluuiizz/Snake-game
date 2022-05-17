@@ -75,6 +75,7 @@ int main (void) {
         
         if (fruit->put_fruit_on_board) {
             new_fruit();
+            printf("\a");
 
         }
 
